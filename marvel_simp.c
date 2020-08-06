@@ -1,9 +1,10 @@
 #include<stdio.h>
 #include<stdint.h>
 #include <stdbool.h>
-
+//#include <time.h>
+#include <unistd.h>
 bool mm_open_port();
-bool mm_get_last_locations(void*);
+bool mm_get_last_locations2(void*);
 bool mm_get_beacon_telemetry();
 bool mm_get_devices_list (void *pdata);
 bool mm_close_port();
@@ -14,7 +15,7 @@ bool mm_send_to_sleep_device(uint8_t addr);
 struct api_v
 {
 	uint32_t vers;
-	
+
 };
 struct device
 {
@@ -57,7 +58,8 @@ struct device_location
 	uint8_t status_flags;
 	uint8_t confidence;
 	uint8_t tbd[2];
-
+	uint16_t angle_data;
+	bool angle_ready;
 };
 
 struct location_data
@@ -70,6 +72,15 @@ struct location_data
 
 };
 
+typedef struct location_data location_packet;
+typedef struct device_location device_location;
+typedef struct	telemetry_info telemetry_info;
+typedef struct list_of_devices list_of_devices;
+typedef struct device device;
+
+
+
+
 void open_serial_port()
 {
 	printf("trying to open the serial port!!\n");
@@ -78,29 +89,29 @@ void open_serial_port()
 		sleep(1);
 	}
 	printf("Successfully opened the serial port!!\n");
-	
+
 
 }
 
 void get_devices_connected()
 {
-	struct list_of_devices l_o_d;
+	list_of_devices device_list;
 	printf("trying to get the device list!!\n");
 
-	while(!mm_get_devices_list(&l_o_d))
+	while(!mm_get_devices_list(&device_list))
 	{
 		sleep(1);
 	}
-	for(int i=0;i<l_o_d.number_of_devices;i++)
+	for(int i=0;i<device_list.number_of_devices;i++)
 	{
-		printf("address of beacons %d found is:: %d \n",i,l_o_d.devices[i].address);
+		printf("address of beacons %d found is:: %d \n",i,device_list.devices[i].address);
 	}
-		
-	
+
+
 }
 void get_telemetry(uint8_t beacon_addr)
 {
-	struct telemetry_info tele;
+	telemetry_info tele;
 	printf("getting telemetry data for %d\n",beacon_addr);
 	while(!(mm_get_beacon_telemetry(beacon_addr,&tele)))
 	{
@@ -112,46 +123,54 @@ void get_telemetry(uint8_t beacon_addr)
 	printf("Battery voltage::%d\n",tele.voltage);
 }
 
+
 void get_latest_data()
 {
-	struct location_data loc_data;
-//printf("x:%d y:%d z:%d confidence:%d\n",loc_data.last_coordinates[1].x,loc_data.last_coordinates[1].y,loc_data.last_coordinates[1].z,loc_data.last_coordinates[1].confidence);
-	for(int i=0;i<6;i++){
-	loc_data.last_coordinates[i].x=0;
-	loc_data.last_coordinates[i].y=0;
-	loc_data.last_coordinates[i].z=0;
-	loc_data.last_coordinates[i].confidence=0;
-	}
-	bool flag=mm_get_last_locations(&loc_data);
-	/*while(!mm_get_last_locations(&loc_data))
-	{
-		sleep(1);
-	}*/
-	
-	printf("workng::%d\n",flag);
-	for(int i=0;i<6;i++)
-	{
-		printf("xxxxxasax:%d y:%d z:%d confidence:%d\n",loc_data.last_coordinates[i].x,loc_data.last_coordinates[i].y,loc_data.last_coordinates[i].z,loc_data.last_coordinates[i].confidence);
-	
+	location_packet loc_pac;
+    int block_size=0; 
+    printf("entered bra\n");
+	uint8_t buff[512];
+    printf("some functio issue");
+	mm_get_last_locations2(buff);
+    for(int i=0;i<6;i++)
+    {
+        printf("entered\n");
+        loc_pac.last_coordinates[i].address=*((uint8_t*)(buff+block_size));
+        loc_pac.last_coordinates[i].head_index=*((uint8_t*)(buff+block_size+(1)));
+        loc_pac.last_coordinates[i].x=*((uint32_t*)(buff+block_size+2));
+        loc_pac.last_coordinates[i].y=*((uint32_t*)(buff+block_size+6));
+        loc_pac.last_coordinates[i].z=*((uint32_t*)(buff+block_size+10));
+        loc_pac.last_coordinates[i].status_flags=*((uint8_t*)(buff+block_size+14));
+        loc_pac.last_coordinates[i].confidence=*((uint8_t*)(buff+block_size+15));
+        loc_pac.last_coordinates[i].tbd[0]=*((uint8_t*)(buff+block_size+16));
+        loc_pac.last_coordinates[i].tbd[1]=*((uint8_t*)(buff+block_size+17));
+        loc_pac.last_coordinates[i].angle_data=*((uint16_t*)(buff+block_size+18));
+        //loc_pac.last_coordinates[i].angle_ready=*((bool*)(buff+block_size+20));
 
-//		printf("address::%d\n",loc_data.last_coordinates[i].address);
-	}
+        printf("address::%d x::%d y::%d z::%d quality::%d \n",loc_pac.last_coordinates[i].address,loc_pac.last_coordinates[i].x,loc_pac.last_coordinates[i].y,loc_pac.last_coordinates[i].z,loc_pac.last_coordinates[i].confidence);
+        block_size+=20;
+    }
 
-	
 }
 
 
 int main()
 
 {
-	struct list_of_devices l_o_d;
-	open_serial_port();	
+	open_serial_port();
 	get_devices_connected();
 	get_telemetry(1);
 	while(1)
 	{
 		get_latest_data();
-		sleep(1);
+		
+		/*flags=mmGetLastLocations2(&loc_dat);
+		for(int i=0;i<6;i++)
+		{
+			printf("x:%d y::%d z::%d quality::%d\n",loc_dat.pos[i].x_mm,loc_dat.pos[i].y_mm,loc_dat.pos[i].z_mm,loc_dat.pos[i].quality);
+		}
+		*/
+		sleep(0.5);
 	}
 
 	mm_close_port();
