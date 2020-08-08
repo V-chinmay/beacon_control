@@ -30,7 +30,7 @@ int main()
 
     //address_s.sin_addr.s_addr=INADDR_ANY;
     address_s.sin_port=htons(1500);
-    sockfd=socket(AF_INET,SOCK_STREAM,0);
+    int sockfd=socket(AF_INET,SOCK_STREAM,0);
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) 
     { 
         perror("setsockopt"); 
