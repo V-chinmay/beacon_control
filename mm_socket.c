@@ -1,19 +1,55 @@
 #include"mm_socket.h"
 
-void recv_till_eof(int sock,char* dest)
+char** split(char* input,char spl_ch)
+{
+    static char* split_d[10];
+    uint8_t word_count=0,prev_i=0;
+    uint8_t inp_len=strlen(input);
+    
+    split_d[0]=input;
+    
+    for(uint8_t i=0;i<inp_len;i++)
+    {
+        split_d[word_count]=(input+prev_i);
+
+        if(input[i]==spl_ch)
+        {
+            input[i]='\0';
+            prev_i=(i+1);
+            word_count++;
+        }
+    }
+    return(&split_d[0]);
+}
+
+int recv_till_eof(int sock,char* dest)
 {
     char buff;
+    char flag;
+
+    memset(dest,'\0',30);
+    buff='\0';
     
     while(buff!='\n')
     {
-        if((recv(sock,&buff,1,MSG_DONTWAIT)>0))
+        flag=recv(sock,&buff,1,MSG_DONTWAIT);
+        if(flag>0 && buff!='\n')
         {
-           *(dest++)=buff;
+           *dest=buff;
+           dest++;
         }
-    }
+        else{
+
+            if(flag==0)
+            {
+                return(0);
+            }
+            }
+    }    
+    return(1);
 }
 
-int main()
+int start_connection()
 {
     int opt=1;
     int addr_len=sizeof(address_s);
@@ -47,5 +83,5 @@ int main()
     
     printf("successfully made the connection!!\n");
     
-    return(1);
+    return(conn_fd);
 }
