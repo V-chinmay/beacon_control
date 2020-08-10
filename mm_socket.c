@@ -32,33 +32,50 @@ int recv_till_eof(int sock,char* dest)
 
     while(buff!='\n')
     {
-        flag=recv(sock,&buff,1,MSG_DONTWAIT);
+        flag=recv(sock,&buff,1,MSG_WAITALL);
         if(flag>0 && buff!='\n')
         {
            *dest=buff;
            dest++;
         }
-        else{
-
+        else
+	{
             if(flag==0)
             {
                 return(0);
             }
-            }
+        }
+	sleep(0.5);
     }
     return(1);
 }
 
-int start_connection(int port_number)
+int start_connection(int port_number,char local_flag)
 {
     int opt=1;
     int addr_len=sizeof(address_s);
-
     address_s.sin_family=AF_INET;
     address_s.sin_port=htons(port_number);
+
+    if(local_flag)
+    {
+	inet_pton(AF_INET, "127.0.0.1", &address_s.sin_addr);
+    	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
+    }
+    else
+    {
+    	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
+    }
+
     int sockfd=socket(AF_INET,SOCK_STREAM,0);
 
 
+    /*if(inet_pton(AF_INET, "192.168.0.11", &address_s.sin_addr)<=0)
+    {
+        printf("\nInvalid address/ Address not supported \n");
+        return -1;
+    } 
+	*/
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
     {
         perror("setsockopt");
@@ -83,15 +100,6 @@ int start_connection(int port_number)
 
     printf("successfully made the connection!!\n");
 
-    if(port_number==2801)
-    {
-        printf("The connection is local!!\n");
-        while(1)
-        {
-            get_latest_data(conn_fd,4);
-            //printf("sending something\n");
-        }
-    }
 
     return(conn_fd);
 }

@@ -9,6 +9,7 @@
 #define MAX_LOCATION_PACKET_SIZE 6
 #define mm_to_m(in_mm) in_mm/1000.0
 
+
 bool mm_open_port();
 bool mm_reset_device (uint8_t address);
 bool mm_get_last_locations2(void*);

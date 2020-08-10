@@ -10,6 +10,8 @@ struct stream_info
     int sockfd;
 };
 
+
+
 void stream_loc(void* info)
 {
     int val=((struct stream_info*)info)->sockfd;
@@ -22,30 +24,27 @@ void stream_loc(void* info)
 int main()
 {
     uint8_t hedgehog_address=4;
-	char buff[30];
+    char buff[30];
     char** input=NULL;
     uint8_t device_address=0;
     open_serial_port();
-	pthread_t thread_id;
+    pthread_t thread_id;
     struct stream_info info;
 
     info.hedgehog_address=4;
-    //pthread_create(&thread_id,NULL,(void*)start_connection,(void*)2801);
-    
-    int conn1=start_connection(3000);
+    int conn1=start_connection(LOC_PORT,1);
     info.sockfd=conn1;
-    //hedgehog_address=get_devices_connected(conn1,0);
     printf("hedgehog_address::%d\n",hedgehog_address);
-        //stream_loc(conn1);
-    int conn=start_connection(2800);
-    
+    int conn=start_connection(REM_PORT,0);
+    sleep(10);
  
     while(1)
 	{
+	printf("in\n");
         if(!recv_till_eof(conn,&buff[0]))
         {
             printf("device disconnected!!\n");
-            conn=start_connection(2800);
+            conn=start_connection(LOC_PORT,1);
         }
 
         printf("received::%s\n",buff);
@@ -54,7 +53,7 @@ int main()
         if(!strcmp(*input,"current"))
         {
             exitFlag=0;
-            pthread_create(&thread_id,NULL,(void*)stream_loc,(void*)&info);
+	    pthread_create(&thread_id,NULL,(void*)stream_loc,(void*)&info);
             send(conn,"started",strlen("started"),MSG_DONTWAIT);
             //get_latest_data(hedgehog_address,conn);
             printf("Sent the latest coordinates!!\n");
@@ -132,10 +131,11 @@ int main()
             exitFlag=1;
             exit(1);
         }
+	printf("done\n");
 		//sleep(0.5);
 	}
     
-
+	
 	mm_close_port();
 
 
