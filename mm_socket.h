@@ -14,7 +14,7 @@
 struct sockaddr_in address_s;
 
 int recv_till_eof(int sock,char* dest);
-int start_connection();
+int start_connection(int);
 char** split(char* input,char spl_ch);
 
 

@@ -1,5 +1,5 @@
 #include"mm_socket.h"
-
+#include"marvelmind_control.h"
 char** split(char* input,char spl_ch)
 {
     static char* split_d[10];
@@ -49,13 +49,13 @@ int recv_till_eof(int sock,char* dest)
     return(1);
 }
 
-int start_connection()
+int start_connection(int port_number)
 {
     int opt=1;
     int addr_len=sizeof(address_s);
 
     address_s.sin_family=AF_INET;
-    address_s.sin_port=htons(PORT);
+    address_s.sin_port=htons(port_number);
     int sockfd=socket(AF_INET,SOCK_STREAM,0);
 
     
@@ -72,7 +72,7 @@ int start_connection()
     }
     else
     {
-        printf("successfully created socket!!\n");
+        printf("successfully created socket at %d!!\n",port_number);
     }
     
     printf("listening!!\n");
@@ -83,5 +83,15 @@ int start_connection()
     
     printf("successfully made the connection!!\n");
     
+    if(port_number==2801)
+    {
+        printf("The connection is local!!\n");
+        while(1)
+        {
+            get_latest_data(conn_fd,4);
+            //printf("sending something\n");
+        }
+    }
+
     return(conn_fd);
 }

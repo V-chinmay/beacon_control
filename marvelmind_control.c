@@ -16,7 +16,7 @@ uint8_t get_devices_connected(int sockfd,bool send_flag)
 {
 	list_of_devices device_list;
 
-    uint8_t hedgehog_address=0;
+    uint8_t hedgehog_address1=0;
     char send_buff[50];
     char buff[50];
     printf("trying to get the device list!!\n");
@@ -42,11 +42,11 @@ uint8_t get_devices_connected(int sockfd,bool send_flag)
 
         if(device_list.devices[i].device_type_id==31)
         {
-            hedgehog_address=device_list.devices[i].address;
+            hedgehog_address1=device_list.devices[i].address;
         }
 
 	}
-    sprintf(buff,"HED-%d#",hedgehog_address);
+    sprintf(buff,"HED-%d#",hedgehog_address1);
     strcat(send_buff,buff);
     //create a string containing device status over tcp
     printf("Got device list!! and is %s \n",send_buff);
@@ -56,7 +56,9 @@ uint8_t get_devices_connected(int sockfd,bool send_flag)
         setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
     send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
     }
-    return(hedgehog_address);
+    printf("%d\n",hedgehog_address1);
+    //exit(-1);
+    return(hedgehog_address1);
 
 }
 
@@ -91,9 +93,11 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
     int block_size=0;
 	uint8_t buff[512];
     char send_buff[50];
+    bool flag=0;
+
     memset(buff,0,512);
     bool done_flag=0;
-	mm_get_last_locations2(buff);
+    mm_get_last_locations2(buff);
     for(int i=0;i<MAX_LOCATION_PACKET_SIZE;i++)
     {
         loc_pac.last_coordinates[i].address=*((uint8_t*)(buff+block_size));
@@ -109,8 +113,7 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
         //loc_pac.last_coordinates[i].angle_ready=*((bool*)(buff+block_size+20));
         if(loc_pac.last_coordinates[i].address==hedgehog_address && done_flag==0)
         {
-            bool flag=1;
-
+            
             setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 
             sprintf(send_buff,"#%d,%.3f,%.3f,%.3f,%d#",loc_pac.last_coordinates[i].address,mm_to_m(loc_pac.last_coordinates[i].x),mm_to_m(loc_pac.last_coordinates[i].y),mm_to_m(loc_pac.last_coordinates[i].z),loc_pac.last_coordinates[i].confidence);
@@ -120,6 +123,12 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
 
         }
         block_size+=20;
+    }
+    if(done_flag==0)
+    {
+        char fail_buff[20]="read-fail";
+        
+        send(sockfd,fail_buff,strlen(fail_buff),MSG_DONTWAIT);
     }
 
 }
