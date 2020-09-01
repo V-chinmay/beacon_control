@@ -40,7 +40,6 @@ int main()
  
     while(1)
 	{
-	printf("in\n");
         if(!recv_till_eof(conn,&buff[0]))
         {
             printf("device disconnected!!\n");
@@ -50,7 +49,7 @@ int main()
         printf("received::%s\n",buff);
         input=split(buff,'-');
 
-        if(!strcmp(*input,"current"))
+        if(!strcmp(*input,"CURRENT"))
         {
             exitFlag=0;
 	    pthread_create(&thread_id,NULL,(void*)stream_loc,(void*)&info);
@@ -59,7 +58,7 @@ int main()
             printf("Sent the latest coordinates!!\n");
         }
 
-        if(!strcmp(*input,"devlist"))
+        if(!strcmp(*input,"DEVLIST"))
         {
             exitFlag=1;
             info.hedgehog_address=get_devices_connected(conn,1);
@@ -68,8 +67,9 @@ int main()
 
         }
 
-        if(!strcmp(*input,"wake"))
+        if(!strcmp(*input,"WAKE"))
         {
+            //wake command format :: WAKE-1 
             exitFlag=1;
             device_address=atoi(*(input+1));
             if(wake_device(device_address,conn))
@@ -82,8 +82,10 @@ int main()
             }
 
         }
-        if(!strcmp(*input,"reset"))
+        if(!strcmp(*input,"RESET"))
         {
+            //reset command format :: RESET-1 
+
             exitFlag=1;
             device_address=atoi(*(input+1));
 
@@ -97,8 +99,10 @@ int main()
             }
             
         }
-        if(!strcmp(*input,"sleep"))
+        if(!strcmp(*input,"SLEEP"))
         {
+            //sleep command format :: SLEEP-1 
+
             exitFlag=1;
             device_address=atoi(*(input+1));
             
@@ -113,8 +117,10 @@ int main()
             
         }
 
-        if(!strcmp(*input,"status"))
+        if(!strcmp(*input,"STATUS"))
         {
+            //status command format :: STATUS-1 
+
             exitFlag=1;
             device_address=atoi(*(input+1));
             get_telemetry(device_address,conn);
@@ -123,7 +129,7 @@ int main()
             
         }
 
-        if(!strcmp(*input,"exit"))
+        if(!strcmp(*input,"EXIT"))
         {
 
             printf("exiting!!\n");
