@@ -32,18 +32,31 @@ int main()
     struct stream_info info;
 
     info.hedgehog_address=4;
-    int conn1=start_connection(LOC_PORT,1);
+    int conn1=start_connection(LOC_PORT,LOC_CON);
     info.sockfd=conn1;
-    printf("hedgehog_address::%d\n",hedgehog_address);
-    int conn=start_connection(REM_PORT,0);
-    sleep(10);
+    printf("Hedgehog_address::%d\n",hedgehog_address);
+    int conn=start_connection(REM_PORT,REM_CON);
+    
  
     while(1)
 	{
         if(!recv_till_eof(conn,&buff[0]))
         {
-            printf("device disconnected!!\n");
-            conn=start_connection(LOC_PORT,1);
+            int temp =conn;
+
+            printf("device disconnected at PORT::%d!!\n",REM_PORT);
+            
+            if(close(conn)>=0){printf("closed connection successfully\n");}else
+            {
+                printf("failed to close connection\n!!");
+            }
+            
+            conn=start_connection(REM_PORT,REM_CON);
+            printf("fd is %d \n",conn);
+            if(temp==conn)
+            {
+                printf("fd same!!\n");
+            }
         }
 
         printf("received::%s\n",buff);
@@ -52,7 +65,7 @@ int main()
         if(!strcmp(*input,"CURRENT"))
         {
             exitFlag=0;
-	    pthread_create(&thread_id,NULL,(void*)stream_loc,(void*)&info);
+	        pthread_create(&thread_id,NULL,(void*)stream_loc,(void*)&info);
             send(conn,"started",strlen("started"),MSG_DONTWAIT);
             //get_latest_data(hedgehog_address,conn);
             printf("Sent the latest coordinates!!\n");
@@ -64,6 +77,12 @@ int main()
             info.hedgehog_address=get_devices_connected(conn,1);
             //send(conn,"done\n",5,MSG_DONTWAIT);
             printf("sent the connected devices list\n");
+
+        }
+        if(!strcmp(*input,"ALLBATT"))
+        {
+            get_battery_all(conn);
+            printf("sent the battery status of all devices\n");
 
         }
 

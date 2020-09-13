@@ -53,17 +53,19 @@ int recv_till_eof(int sock,char* dest)
 int start_connection(int port_number,char local_flag)
 {
     int opt=1;
-    int addr_len=sizeof(address_s);
+    
     address_s.sin_family=AF_INET;
     address_s.sin_port=htons(port_number);
 
     if(local_flag)
     {
-	inet_pton(AF_INET, "127.0.0.1", &address_s.sin_addr);
+        printf("Connection is local\n");
+	    inet_pton(AF_INET, "127.0.0.1", &address_s.sin_addr);
     	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
     }
     else
     {
+        printf("Connection is Remote\n");
     	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
     }
 
@@ -81,6 +83,7 @@ int start_connection(int port_number,char local_flag)
         perror("setsockopt");
         return(0);
     }
+    int addr_len=sizeof(address_s);
 
     if(bind(sockfd,(struct sockaddr *)&address_s,(socklen_t)addr_len))
     {
@@ -94,8 +97,13 @@ int start_connection(int port_number,char local_flag)
 
     printf("listening!!\n");
 
-    listen(sockfd,MAX_CON);
-
+    
+    if(listen(sockfd,MAX_CON)>0)
+    {
+        printf("is listening\n");
+    }
+    printf("finished listening!!\n");
+    
     int conn_fd=accept(sockfd,(struct sockaddr *)&address_s,(socklen_t*)&addr_len);
 
     printf("successfully made the connection!!\n");

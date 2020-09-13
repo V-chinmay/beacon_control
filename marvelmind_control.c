@@ -1,5 +1,6 @@
 #include <netinet/tcp.h>
 #include "marvelmind_control.h"
+
 void open_serial_port()
 {
 	printf("trying to open the serial port!!\n");
@@ -25,8 +26,10 @@ uint8_t get_devices_connected(int sockfd,bool send_flag)
 	{
 		sleep(1);
 	}
-	sprintf(send_buff,"#%d,",device_list.number_of_devices);
 
+	//sprintf(send_buff,"%d,",device_list.number_of_devices); //add for number of devices
+    
+    sprintf(send_buff,"%c",' '); 
     for(int i=0;i<device_list.number_of_devices;i++)
 	{
         sprintf(buff,"%d-%d,",device_list.devices[i].address,device_list.devices[i].sleep_flag);
@@ -46,8 +49,9 @@ uint8_t get_devices_connected(int sockfd,bool send_flag)
         }
 
 	}
-    sprintf(buff,"HED-%d#",hedgehog_address1);
+    sprintf(buff,"HED-%d",hedgehog_address1);
     strcat(send_buff,buff);
+    strcat(send_buff,"\n");
     //create a string containing device status over tcp
     printf("Got device list!! and is %s \n",send_buff);
     bool flag=1;
@@ -71,13 +75,14 @@ void get_telemetry(uint8_t beacon_addr,int sockfd)
 	{
 		sleep(1);
 	}
-    sprintf(send_buff,"#%d,%d,%d,%.3f#",tele.time_from_reset,tele.radio_strength,tele.temperature,(tele.voltage/1000.0));
+    sprintf(send_buff,"%d,%d,%d,%.3f",tele.time_from_reset,tele.radio_strength,tele.temperature,(tele.voltage/1000.0));
     /*printf("Time since reset::%d\n",tele.time_from_reset);
 	printf("RSSI strength::%d\n",tele.radio_strength);
 	printf("Temperature::%d\n",tele.temperature);
 	printf("Battery voltage::%d\n",tele.voltage);
     */
     bool flag=1;
+    strcat(send_buff,"\n");
 
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 
@@ -86,6 +91,68 @@ void get_telemetry(uint8_t beacon_addr,int sockfd)
     printf("tele::%s\n",send_buff);
 }
 
+void get_battery_all(int sockfd)
+{
+    list_of_devices device_list;
+    telemetry_info tele;
+
+    uint8_t timer_count=0;
+    char send_buff[50];
+    char buff[50];
+    printf("trying to get the device list!!\n");
+
+	while(!mm_get_devices_list(&device_list))
+	{
+		sleep(1);
+	}
+
+	//sprintf(send_buff,"%d,",device_list.number_of_devices); //add for number of devices
+    printf("Getting battery status of all beacons!!\n");
+
+    sprintf(send_buff,"%c",' '); 
+    for(int i=0;i<device_list.number_of_devices;i++)
+	{
+        bool timeout=0;
+
+        printf("device number %d and state %d \n",i,(device_list.devices[i].device_flags & 0x0000000F));//modem needs to be restarted to get to update device flags so timeout is better
+		
+        while(!(mm_get_beacon_telemetry(device_list.devices[i].address,&tele)))
+	    {
+                if(timer_count>1)
+                {
+                    timeout=1;
+                    break;
+                }
+		        sleep(1);
+                timer_count++;
+	    }
+
+        if(timeout)
+        {
+            printf("Beacon %d is sleeping \n",device_list.devices[i].address);    
+            sprintf(buff,"%d-%s,",device_list.devices[i].address,"nil");
+
+        }
+        else
+        {
+        	printf("Beacon %d is awake and got telemetry data!! %f\n",device_list.devices[i].address,(tele.voltage/1000.0));
+            sprintf(buff,"%d-%.2f,",device_list.devices[i].address,(tele.voltage/1000.0));
+            printf("buffer is %s",buff);
+        }
+        strcat(send_buff,buff);
+
+
+    }
+    strcat(send_buff,"\n");
+    printf("got the battery all as %s\n",send_buff);
+
+    bool flag=1;
+
+    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+
+    send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+
+}
 
 void get_latest_data(uint8_t hedgehog_address,int sockfd)
 {
@@ -137,13 +204,24 @@ bool wake_device(uint8_t address,int sockfd)
 {
     bool s_flag=mm_wake_device(address);
     char send_buff[10];
-    sprintf(send_buff,"#%d#",s_flag);
     bool flag=1;
 
+    //memset(send_buff,'0',10);
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 
-    send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+    if(s_flag)
+    {
+        strcat(send_buff,"true");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
+    }
+    else
+    {
+        strcat(send_buff,"false");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
 
+    }
     return(s_flag);
 }
 
@@ -151,12 +229,25 @@ bool sleep_device(uint8_t address,int sockfd)
 {
     bool s_flag=mm_send_to_sleep_device(address);
     char send_buff[10];
-    sprintf(send_buff,"#%d#",s_flag);
     bool flag=1;
+    //memset(send_buff,'0',10);
 
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 
-    send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+    if(s_flag)
+    {
+        strcat(send_buff,"true");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
+    }
+    else
+    {
+        strcat(send_buff,"false");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
+
+    }
+
     return(s_flag);
 }
 
@@ -165,14 +256,25 @@ bool reset_device(uint8_t address,int sockfd)
     bool s_flag=mm_reset_device(address);
     char send_buff[10];
     bool flag=1;
+    //memset(send_buff,'0',10);
 
     setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 
+    if(s_flag)
+    {
+        strcat(send_buff,"true");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
+    }
+    else
+    {
+        strcat(send_buff,"false");
+        send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+        send(sockfd,"\n",1,MSG_DONTWAIT);
 
-    sprintf(send_buff,"#%d#",s_flag);
-    send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+    }
 
-    return(s_flag);
+        return(s_flag);
 
 }
 
