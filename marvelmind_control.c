@@ -154,7 +154,7 @@ void get_battery_all(int sockfd)
 
 }
 
-void get_latest_data(uint8_t hedgehog_address,int sockfd)
+int get_latest_data(uint8_t hedgehog_address,int sockfd)
 {
 	location_packet loc_pac;
     int block_size=0;
@@ -164,7 +164,10 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
 
     memset(buff,0,512);
     bool done_flag=0;
-    mm_get_last_locations2(buff);
+    if(!mm_get_last_locations2(buff))
+    {
+        return(0);
+    }
     for(int i=0;i<MAX_LOCATION_PACKET_SIZE;i++)
     {
         loc_pac.last_coordinates[i].address=*((uint8_t*)(buff+block_size));
@@ -185,7 +188,12 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
 
             sprintf(send_buff,"#%d,%.3f,%.3f,%.3f,%d#",loc_pac.last_coordinates[i].address,mm_to_m(loc_pac.last_coordinates[i].x),mm_to_m(loc_pac.last_coordinates[i].y),mm_to_m(loc_pac.last_coordinates[i].z),loc_pac.last_coordinates[i].confidence);
             printf("coor::%s\n",send_buff);
-            send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT);
+            if(send(sockfd,send_buff,strlen(send_buff),MSG_DONTWAIT)<0)
+            {
+                printf("Failed to write location!!\n");
+                return(2);
+            }
+            printf("sent\n");
             done_flag=1;
 
         }
@@ -193,10 +201,10 @@ void get_latest_data(uint8_t hedgehog_address,int sockfd)
     }
     if(done_flag==0)
     {
-        char fail_buff[20]="read-fail";
-        
+        char* fail_buff = calloc(3,sizeof(char));
         send(sockfd,fail_buff,strlen(fail_buff),MSG_DONTWAIT);
     }
+    return(1);
 
 }
 

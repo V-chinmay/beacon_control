@@ -22,7 +22,7 @@ bool mm_wake_device (uint8_t address);
 void open_serial_port();
 uint8_t get_devices_connected(int,bool);
 void get_telemetry(uint8_t beacon_addr,int);
-void get_latest_data(uint8_t hedgehog_address,int);
+int get_latest_data(uint8_t hedgehog_address,int);
 bool wake_device(uint8_t address,int);
 bool sleep_device(uint8_t address,int);
 bool reset_device(uint8_t address,int);

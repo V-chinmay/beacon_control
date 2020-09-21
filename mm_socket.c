@@ -1,5 +1,8 @@
 #include"mm_socket.h"
 #include"marvelmind_control.h"
+#include <fcntl.h>
+
+
 char** split(char* input,char spl_ch)
 {
     static char* split_d[10];
@@ -53,24 +56,32 @@ int recv_till_eof(int sock,char* dest)
 int start_connection(int port_number,char local_flag)
 {
     int opt=1;
-    
+    int sockfd=0;
+    static int no_reqs=0;
     address_s.sin_family=AF_INET;
     address_s.sin_port=htons(port_number);
-
+    
     if(local_flag)
     {
         printf("Connection is local\n");
+        sockfd = socket(AF_INET,SOCK_STREAM,0);
+
 	    inet_pton(AF_INET, "127.0.0.1", &address_s.sin_addr);
     	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
     }
     else
     {
         printf("Connection is Remote\n");
-    	address_s.sin_addr.s_addr=htonl(INADDR_ANY);
+        sockfd = socket(AF_INET,SOCK_STREAM,0);
+        if(inet_pton(AF_INET, ipaddr, &address_s.sin_addr)<=0)
+        {
+            printf("\nInvalid address/ Address not supported \n");
+            return -1;
+        } 
+    	//address_s.sin_addr.s_addr=htonl(INADDR_ANY);
     }
 
-    int sockfd=socket(AF_INET,SOCK_STREAM,0);
-
+    
 
     /*if(inet_pton(AF_INET, "192.168.0.11", &address_s.sin_addr)<=0)
     {
@@ -78,6 +89,7 @@ int start_connection(int port_number,char local_flag)
         return -1;
     } 
 	*/
+
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
     {
         perror("setsockopt");
@@ -95,19 +107,22 @@ int start_connection(int port_number,char local_flag)
         printf("successfully created socket at %d!!\n",port_number);
     }
 
-    printf("listening!!\n");
-
+    
     
     if(listen(sockfd,MAX_CON)>0)
     {
-        printf("is listening\n");
+        printf("listening!!\n");
     }
-    printf("finished listening!!\n");
+    fcntl(sockfd, F_SETFL,  O_NONBLOCK);
+   
+    int conn_fd=0;
     
-    int conn_fd=accept(sockfd,(struct sockaddr *)&address_s,(socklen_t*)&addr_len);
-
-    printf("successfully made the connection!!\n");
-
+    while((conn_fd=accept(sockfd,(struct sockaddr *)&address_s,(socklen_t*)&addr_len))<0)
+    {
+    }
+    close(sockfd);
+    printf("successfully made the connection and connection number  is %d !!\n",no_reqs);
+    no_reqs++;
 
     return(conn_fd);
 }

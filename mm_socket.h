@@ -13,6 +13,8 @@
 #define LOC_CON 1
 #define REM_CON 0
 
+char ipaddr[20];
+
 struct sockaddr_in address_s;
 
 int recv_till_eof(int sock,char* dest);
